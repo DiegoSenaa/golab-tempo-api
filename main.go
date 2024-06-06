@@ -80,6 +80,8 @@ type WeatherApiResponse struct {
 	} `json:"current"`
 }
 
+var fetchDataFunc = fetchData
+
 func main() {
 	app := fiber.New()
 	app.Get("/:cep", handleRequest)
@@ -94,7 +96,7 @@ func handleRequest(c *fiber.Ctx) error {
 	}
 
 	url := urlViaCep + "ws/" + cep + "/json"
-	response, err := fetchData(c, url)
+	response, err := fetchDataFunc(url)
 	if err != nil || response == nil {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "can not find zipcode"})
 	}
@@ -115,7 +117,7 @@ func handleRequest(c *fiber.Ctx) error {
 	url = urlWeatherApi + "current.json?key=" + weatherApiKey + "&q=" + city + " - " + state + " - Brazil&aqi=no&tides=no"
 	url = strings.Replace(url, " ", "%20", -1)
 
-	response, err = fetchData(c, url)
+	response, err = fetchDataFunc(url)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Error fetching weather data"})
 	}
@@ -135,7 +137,7 @@ func handleRequest(c *fiber.Ctx) error {
 	return c.Send(response)
 }
 
-func fetchData(c *fiber.Ctx, url string) (response []byte, err error) {
+func fetchData(url string) (response []byte, err error) {
 	client := fasthttp.Client{}
 
 	req := fasthttp.AcquireRequest()
@@ -152,8 +154,6 @@ func fetchData(c *fiber.Ctx, url string) (response []byte, err error) {
 	if res.StatusCode() != fiber.StatusOK {
 		return nil, errors.New("invalid statuscode")
 	}
-
-	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSONCharsetUTF8)
 
 	return res.Body(), nil
 }
